@@ -182,7 +182,7 @@ function FullHelix({
               <meshStandardMaterial
                 color={c1}
                 emissive={c1}
-                emissiveIntensity={isFocused ? 2 : isHighlighted ? 1.2 : isMutated ? 1.5 : 0.5}
+                emissiveIntensity={isFocused ? 2 : isHighlighted ? 1.8 : isMutated ? 1.5 : 0.5}
               />
             </mesh>
             <mesh position={basePos2} scale={isHighlighted || isFocused ? 1.5 : 1}>
@@ -190,15 +190,23 @@ function FullHelix({
               <meshStandardMaterial
                 color={c2}
                 emissive={c2}
-                emissiveIntensity={isFocused ? 2 : isHighlighted ? 1.2 : isMutated ? 1.5 : 0.5}
+                emissiveIntensity={isFocused ? 2 : isHighlighted ? 1.8 : isMutated ? 1.5 : 0.5}
               />
             </mesh>
             
-            {/* Selection ring */}
+            {/* Extra glow for highlighting (e.g. search pattern matches) */}
+            {isHighlighted && !isFocused && (
+              <mesh position={mid}>
+                <torusGeometry args={[0.7, 0.03, 16, 64]} />
+                <meshBasicMaterial color="#ffffff" transparent opacity={0.6} />
+              </mesh>
+            )}
+            
+            {/* Selection ring for exact focus */}
             {isFocused && (
               <mesh position={mid}>
-                <torusGeometry args={[0.6, 0.02, 16, 32]} />
-                <meshBasicMaterial color="#ffffff" />
+                <torusGeometry args={[0.6, 0.04, 16, 64]} />
+                <meshBasicMaterial color="#00ffcc" />
               </mesh>
             )}
 

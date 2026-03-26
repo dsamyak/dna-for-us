@@ -375,6 +375,7 @@ export default function Index() {
               {/* Click-to-Focus Info Panel overlay */}
               {focusedBasePair && (
                 <BaseInfoPanel 
+                  key={`info-${focusedBasePair.index}`}
                   base={focusedBasePair.base} 
                   index={focusedBasePair.index} 
                   onClose={() => setFocusedBasePair(null)} 
