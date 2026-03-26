@@ -13,6 +13,10 @@ export default {
       },
     },
     extend: {
+      fontFamily: {
+        display: ['Orbitron', 'sans-serif'],
+        mono: ['Share Tech Mono', 'monospace'],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -46,6 +50,12 @@ export default {
         card: {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
+        },
+        dna: {
+          adenine: "hsl(var(--base-adenine))",
+          thymine: "hsl(var(--base-thymine))",
+          cytosine: "hsl(var(--base-cytosine))",
+          guanine: "hsl(var(--base-guanine))",
         },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
