@@ -9,7 +9,7 @@ function generateSlots(count: number): SlotData[] {
   return Array.from({ length: count }, (_, i) => ({
     id: i,
     base: BASES[Math.floor(Math.random() * 4)],
-    position: new (window as any).THREE?.Vector3?.(0, 0, 0) ?? { x: 0, y: 0, z: 0 } as any,
+    position: { x: 0, y: 0, z: 0 } as any,
     matched: false,
   }));
 }
