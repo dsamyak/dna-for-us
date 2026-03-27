@@ -3,13 +3,14 @@ import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Float, Text, Environment } from "@react-three/drei";
 import * as THREE from "three";
 
-type BaseName = "A" | "T" | "C" | "G";
+type BaseName = "A" | "T" | "C" | "G" | "U";
 
 const BASE_COLORS: Record<BaseName, string> = {
   A: "#00d4ff",
   T: "#ffbb00",
   C: "#33dd77",
   G: "#e050a0",
+  U: "#ff8800",
 };
 
 const COMPLEMENT: Record<BaseName, BaseName> = {
@@ -17,6 +18,7 @@ const COMPLEMENT: Record<BaseName, BaseName> = {
   T: "A",
   C: "G",
   G: "C",
+  U: "A",
 };
 
 interface SlotData {
@@ -24,6 +26,7 @@ interface SlotData {
   base: BaseName;
   position: THREE.Vector3;
   matched: boolean;
+  isMutated?: boolean;
 }
 
 interface FloatingBaseProps {
@@ -31,21 +34,23 @@ interface FloatingBaseProps {
   position: [number, number, number];
   selected: boolean;
   onClick: () => void;
+  combo?: number;
 }
 
-function FloatingBase({ base, position, selected, onClick }: FloatingBaseProps) {
+function FloatingBase({ base, position, selected, onClick, combo = 1 }: FloatingBaseProps) {
   const meshRef = useRef<THREE.Mesh>(null);
   const color = BASE_COLORS[base];
 
   useFrame((_, delta) => {
     if (meshRef.current) {
-      meshRef.current.rotation.y += delta * 0.5;
-      meshRef.current.rotation.x += delta * 0.3;
+      const speedModifier = 1 + (combo - 1) * 0.2;
+      meshRef.current.rotation.y += delta * 0.5 * speedModifier;
+      meshRef.current.rotation.x += delta * 0.3 * speedModifier;
     }
   });
 
   return (
-    <Float speed={2} rotationIntensity={0.5} floatIntensity={1.5}>
+    <Float speed={2 + (combo - 1)} rotationIntensity={0.5 + combo * 0.2} floatIntensity={1.5 + combo * 0.2}>
       <group position={position} onClick={(e) => { e.stopPropagation(); onClick(); }}>
         <mesh ref={meshRef}>
           <dodecahedronGeometry args={[0.35, 0]} />
@@ -84,14 +89,16 @@ interface HelixProps {
   slots: SlotData[];
   onSlotClick: (slotId: number) => void;
   highlightSlot: number | null;
+  combo?: number;
 }
 
-function DNAHelix({ slots, onSlotClick, highlightSlot }: HelixProps) {
+function DNAHelix({ slots, onSlotClick, highlightSlot, combo = 1 }: HelixProps) {
   const groupRef = useRef<THREE.Group>(null);
 
   useFrame((_, delta) => {
     if (groupRef.current) {
-      groupRef.current.rotation.y += delta * 0.15;
+      const speed = 0.15 + (combo - 1) * 0.05;
+      groupRef.current.rotation.y += delta * speed;
     }
   });
 
@@ -254,6 +261,7 @@ export interface DNASceneProps {
   onSelectBase: (base: BaseName | null) => void;
   onSlotClick: (slotId: number) => void;
   highlightSlot: number | null;
+  combo?: number;
 }
 
 export default function DNAScene({
@@ -263,6 +271,7 @@ export default function DNAScene({
   onSelectBase,
   onSlotClick,
   highlightSlot,
+  combo = 1,
 }: DNASceneProps) {
   const handleBaseClick = useCallback(
     (base: BaseName) => {
@@ -278,7 +287,7 @@ export default function DNAScene({
       <pointLight position={[-5, -3, 3]} intensity={0.6} color="#e050a0" />
       <spotLight position={[0, 8, 0]} intensity={0.5} color="#33dd77" angle={0.4} />
 
-      <DNAHelix slots={slots} onSlotClick={onSlotClick} highlightSlot={highlightSlot} />
+      <DNAHelix slots={slots} onSlotClick={onSlotClick} highlightSlot={highlightSlot} combo={combo} />
 
       {floatingBases.map((fb, i) => (
         <FloatingBase
@@ -287,6 +296,7 @@ export default function DNAScene({
           position={fb.position}
           selected={selectedBase === fb.base}
           onClick={() => handleBaseClick(fb.base)}
+          combo={combo}
         />
       ))}
 

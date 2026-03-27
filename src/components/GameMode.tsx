@@ -44,6 +44,12 @@ export default function GameMode() {
       numSlots = 20;
       time = 100;
       allowedBases = RNA_BASES;
+    } else if (newLevel === 4) {
+      numSlots = 24;
+      time = 80;
+    } else if (newLevel >= 5) {
+      numSlots = 30;
+      time = 60;
     }
 
     const newSlots: SlotData[] = Array.from({ length: numSlots }, (_, i) => ({
@@ -92,7 +98,8 @@ export default function GameMode() {
       });
 
       // Random mutations
-      if (Math.random() < 0.1) {
+      const mutationRate = level === 4 ? 0.25 : 0.1;
+      if (Math.random() < mutationRate) {
         setSlots((prev) => {
           const next = [...prev];
           const matchedSlots = next.filter((s) => s.matched && !s.isMutated);
@@ -108,8 +115,26 @@ export default function GameMode() {
     }, 1000);
     
     return () => clearInterval(timer);
-  }, [gameState, showMessage]);
+  }, [gameState, showMessage, level]);
 
+  const handleHint = useCallback(() => {
+    if (gameState !== "playing") return;
+    if (timeLeft <= 15) {
+      showMessage("Not enough time for a hint! Costs 15s.", "error");
+      return;
+    }
+    
+    setSlots((prev) => {
+      const unmatched = prev.find((s) => !s.matched || s.isMutated);
+      if (unmatched) {
+        setHighlightSlot(unmatched.id);
+        setTimeLeft((t) => Math.max(1, t - 15));
+        showMessage(`Hint used! Look for ${unmatched.base}. -15s`, "info");
+        setTimeout(() => setHighlightSlot(null), 3000);
+      }
+      return prev;
+    });
+  }, [gameState, timeLeft, showMessage]);
 
   const handleSlotClick = useCallback((slotId: number) => {
     if (gameState !== "playing" || !selectedBase) return;
@@ -127,9 +152,11 @@ export default function GameMode() {
         
         setCombo((c) => {
           const newCombo = c + 1;
+          const timeBonus = newCombo >= 3 ? 3 : 0;
           setScore((s) => s + (100 * newCombo));
-          if (newCombo >= 3) {
-            showMessage(`${newCombo}x Combo!`, "success");
+          if (timeBonus > 0) {
+            setTimeLeft((t) => t + timeBonus);
+            showMessage(`${newCombo}x Combo! +${timeBonus}s Bonus!`, "success");
           } else {
             showMessage("Correct match!", "success");
           }
@@ -178,8 +205,10 @@ export default function GameMode() {
         messageType={messageType}
         gameState={gameState}
         onRestart={() => initGame(1, 0)}
-        onNextLevel={() => initGame(level === 3 ? 1 : level + 1, score)}
+        onNextLevel={() => initGame(level >= 5 ? 1 : level + 1, score)}
         onSelectBase={setSelectedBase}
+        onHint={handleHint}
+        allowedBases={level === 3 ? RNA_BASES : BASES}
       />
       <DNAScene 
         slots={slots}
@@ -188,6 +217,7 @@ export default function GameMode() {
         onSelectBase={setSelectedBase}
         onSlotClick={handleSlotClick}
         highlightSlot={highlightSlot}
+        combo={combo}
       />
     </div>
   );
