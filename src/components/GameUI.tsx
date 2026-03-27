@@ -5,7 +5,6 @@ const BASE_LABELS: Record<BaseName, string> = {
   T: "Thymine",
   C: "Cytosine",
   G: "Guanine",
-  U: "Uracil",
 };
 
 const BASE_TW: Record<BaseName, string> = {
@@ -13,13 +12,10 @@ const BASE_TW: Record<BaseName, string> = {
   T: "text-dna-thymine border-dna-thymine/40",
   C: "text-dna-cytosine border-dna-cytosine/40",
   G: "text-dna-guanine border-dna-guanine/40",
-  U: "text-orange-500 border-orange-500/40",
 };
 
 interface GameUIProps {
   score: number;
-  level: number;
-  combo: number;
   totalSlots: number;
   matchedCount: number;
   timeLeft: number;
@@ -28,14 +24,11 @@ interface GameUIProps {
   messageType: "success" | "error" | "info";
   gameState: "playing" | "won" | "lost";
   onRestart: () => void;
-  onNextLevel: () => void;
   onSelectBase: (base: BaseName) => void;
 }
 
 export default function GameUI({
   score,
-  level,
-  combo,
   totalSlots,
   matchedCount,
   timeLeft,
@@ -44,7 +37,6 @@ export default function GameUI({
   messageType,
   gameState,
   onRestart,
-  onNextLevel,
   onSelectBase,
 }: GameUIProps) {
   const timePercent = (timeLeft / 90) * 100;
@@ -59,10 +51,6 @@ export default function GameUI({
           <p className="font-display text-lg text-primary text-glow">Helix Decoder</p>
         </div>
         <div className="flex gap-3">
-          <div className="rounded-lg border border-border bg-card/80 px-4 py-2 text-center backdrop-blur-md">
-            <p className="font-mono text-xs text-muted-foreground">LEVEL/COMBO</p>
-            <p className="font-display text-xl text-primary">{level} <span className="text-sm text-accent opacity-80">({combo}x)</span></p>
-          </div>
           <div className="rounded-lg border border-border bg-card/80 px-4 py-2 text-center backdrop-blur-md">
             <p className="font-mono text-xs text-muted-foreground">MATCHED</p>
             <p className="font-display text-xl text-accent">{matchedCount}/{totalSlots}</p>
@@ -106,7 +94,7 @@ export default function GameUI({
 
       {/* Base selector at bottom */}
       <div className="pointer-events-auto absolute bottom-6 left-1/2 flex -translate-x-1/2 gap-3">
-        {(["A", level === 3 ? "U" : "T", "C", "G"] as BaseName[]).map((base) => (
+        {(["A", "T", "C", "G"] as BaseName[]).map((base) => (
           <button
             key={base}
             onClick={() => onSelectBase(base)}
@@ -151,10 +139,10 @@ export default function GameUI({
               Score: {score} • Matched: {matchedCount}/{totalSlots}
             </p>
             <button
-              onClick={gameState === "won" ? onNextLevel : onRestart}
+              onClick={onRestart}
               className="mt-4 rounded-lg bg-primary px-6 py-2 font-display text-sm text-primary-foreground transition-transform hover:scale-105"
             >
-              {gameState === "won" ? (level === 3 ? "Play Again" : "Next Level") : "Try Again"}
+              Try Again
             </button>
           </div>
         </div>

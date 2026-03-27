@@ -3,14 +3,13 @@ import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Float, Text, Environment } from "@react-three/drei";
 import * as THREE from "three";
 
-type BaseName = "A" | "T" | "C" | "G" | "U";
+type BaseName = "A" | "T" | "C" | "G";
 
 const BASE_COLORS: Record<BaseName, string> = {
   A: "#00d4ff",
   T: "#ffbb00",
   C: "#33dd77",
   G: "#e050a0",
-  U: "#ff8800",
 };
 
 const COMPLEMENT: Record<BaseName, BaseName> = {
@@ -18,7 +17,6 @@ const COMPLEMENT: Record<BaseName, BaseName> = {
   T: "A",
   C: "G",
   G: "C",
-  U: "A",
 };
 
 interface SlotData {
@@ -26,7 +24,6 @@ interface SlotData {
   base: BaseName;
   position: THREE.Vector3;
   matched: boolean;
-  isMutated?: boolean;
 }
 
 interface FloatingBaseProps {
@@ -181,29 +178,10 @@ function DNAHelix({ slots, onSlotClick, highlightSlot }: HelixProps) {
           <group key={`slot-${slot.id}`}>
             {slot.matched ? (
               <>
-                <mesh 
-                  position={slotPos}
-                  onClick={(e) => {
-                    if (slot.isMutated) {
-                      e.stopPropagation();
-                      onSlotClick(slot.id);
-                    }
-                  }}
-                >
+                <mesh position={slotPos}>
                   <sphereGeometry args={[0.15, 8, 8]} />
-                  <meshStandardMaterial 
-                    color={slot.isMutated ? "#ff0000" : color} 
-                    emissive={slot.isMutated ? "#ff0000" : color} 
-                    emissiveIntensity={slot.isMutated ? 1.5 : 0.8} 
-                    wireframe={slot.isMutated}
-                  />
+                  <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.8} />
                 </mesh>
-                {slot.isMutated && (
-                  <mesh position={slotPos}>
-                    <sphereGeometry args={[0.25, 16, 16]} />
-                    <meshBasicMaterial color="#ff0000" transparent opacity={0.3} wireframe />
-                  </mesh>
-                )}
                 {/* Bond between bases */}
                 <line>
                   <bufferGeometry>
@@ -217,7 +195,7 @@ function DNAHelix({ slots, onSlotClick, highlightSlot }: HelixProps) {
                       itemSize={3}
                     />
                   </bufferGeometry>
-                  <lineBasicMaterial color={slot.isMutated ? "#ff0000" : "#ffffff"} transparent opacity={slot.isMutated ? 0.6 : 0.3} />
+                  <lineBasicMaterial color="#ffffff" transparent opacity={0.3} />
                 </line>
               </>
             ) : (

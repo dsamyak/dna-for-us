@@ -1,8 +1,7 @@
-import { useRef, useMemo, useEffect, useState } from "react";
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { useRef, useMemo } from "react";
+import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Text, Html } from "@react-three/drei";
 import * as THREE from "three";
-import gsap from "gsap";
 
 type BaseName = "A" | "T" | "C" | "G";
 
@@ -32,10 +31,6 @@ function FullHelix({
   highlightIndex,
   mutationIndex,
   mutationType,
-  autoRotate,
-  searchPattern,
-  onBasePairClick,
-  focusedIndex,
 }: {
   sequence: BaseName[];
   showLabels: boolean;
@@ -45,31 +40,13 @@ function FullHelix({
   highlightIndex: number | null;
   mutationIndex: number | null;
   mutationType: string | null;
-  autoRotate: boolean;
-  searchPattern: string;
-  onBasePairClick?: (index: number, base: BaseName, position: THREE.Vector3) => void;
-  focusedIndex: number | null;
 }) {
   const groupRef = useRef<THREE.Group>(null);
   const count = sequence.length;
-  
-  // Search matching logic
-  const matchIndices = useMemo(() => {
-    if (!searchPattern || searchPattern.length === 0) return [];
-    const upperPattern = searchPattern.toUpperCase();
-    const indices: number[] = [];
-    for (let i = 0; i <= sequence.length - upperPattern.length; i++) {
-      const slice = sequence.slice(i, i + upperPattern.length).join("");
-      if (slice === upperPattern) {
-        for (let j = 0; j < upperPattern.length; j++) indices.push(i + j);
-      }
-    }
-    return indices;
-  }, [sequence, searchPattern]);
 
   useFrame((_, delta) => {
-    if (groupRef.current && autoRotate && focusedIndex === null) {
-      groupRef.current.rotation.y += delta * 0.15;
+    if (groupRef.current) {
+      groupRef.current.rotation.y += delta * 0.08;
     }
   });
 
@@ -83,7 +60,6 @@ function FullHelix({
       base2: BaseName;
       index: number;
       y: number;
-      mid: THREE.Vector3;
     }[] = [];
 
     for (let i = 0; i < count; i++) {
@@ -110,7 +86,6 @@ function FullHelix({
         base2,
         index: i,
         y,
-        mid: new THREE.Vector3((x1 + x2) / 2, y, (z1 + z2) / 2),
       });
     }
 
@@ -154,9 +129,7 @@ function FullHelix({
       {/* Base pairs with hydrogen bonds */}
       {helixData.basePairs.map((bp) => {
         const isMutated = mutationIndex === bp.index;
-        const isHighlighted = highlightIndex === bp.index || matchIndices.includes(bp.index);
-        const isFocused = focusedIndex === bp.index;
-        
+        const isHighlighted = highlightIndex === bp.index;
         const c1 = isMutated ? "#ff0000" : BASE_COLORS[bp.base1];
         const c2 = isMutated ? "#ff0000" : BASE_COLORS[bp.base2];
         const mid = bp.pos1.clone().lerp(bp.pos2, 0.5);
@@ -169,46 +142,24 @@ function FullHelix({
         const bondCount = (bp.base1 === "C" || bp.base1 === "G") ? 3 : 2;
 
         return (
-          <group 
-            key={`bp-${bp.index}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              onBasePairClick?.(bp.index, bp.base1, mid);
-            }}
-          >
+          <group key={`bp-${bp.index}`}>
             {/* Base spheres */}
-            <mesh position={basePos1} scale={isHighlighted || isFocused ? 1.5 : 1}>
+            <mesh position={basePos1} scale={isHighlighted ? 1.5 : 1}>
               <sphereGeometry args={[0.18, 12, 12]} />
               <meshStandardMaterial
                 color={c1}
                 emissive={c1}
-                emissiveIntensity={isFocused ? 2 : isHighlighted ? 1.8 : isMutated ? 1.5 : 0.5}
+                emissiveIntensity={isHighlighted ? 1.2 : isMutated ? 1.5 : 0.5}
               />
             </mesh>
-            <mesh position={basePos2} scale={isHighlighted || isFocused ? 1.5 : 1}>
+            <mesh position={basePos2} scale={isHighlighted ? 1.5 : 1}>
               <sphereGeometry args={[0.18, 12, 12]} />
               <meshStandardMaterial
                 color={c2}
                 emissive={c2}
-                emissiveIntensity={isFocused ? 2 : isHighlighted ? 1.8 : isMutated ? 1.5 : 0.5}
+                emissiveIntensity={isHighlighted ? 1.2 : isMutated ? 1.5 : 0.5}
               />
             </mesh>
-            
-            {/* Extra glow for highlighting (e.g. search pattern matches) */}
-            {isHighlighted && !isFocused && (
-              <mesh position={mid}>
-                <torusGeometry args={[0.7, 0.03, 16, 64]} />
-                <meshBasicMaterial color="#ffffff" transparent opacity={0.6} />
-              </mesh>
-            )}
-            
-            {/* Selection ring for exact focus */}
-            {isFocused && (
-              <mesh position={mid}>
-                <torusGeometry args={[0.6, 0.04, 16, 64]} />
-                <meshBasicMaterial color="#00ffcc" />
-              </mesh>
-            )}
 
             {/* Hydrogen bonds (dashed effect with segments) */}
             {showHydrogenBonds && Array.from({ length: bondCount }).map((_, bi) => {
@@ -227,18 +178,18 @@ function FullHelix({
                       itemSize={3}
                     />
                   </bufferGeometry>
-                  <lineBasicMaterial color="#ffffff" transparent opacity={isFocused ? 0.8 : 0.25} />
+                  <lineBasicMaterial color="#ffffff" transparent opacity={0.25} />
                 </line>
               );
             })}
 
             {/* Labels */}
-            {(showLabels || isFocused) && (
+            {showLabels && (
               <>
-                <Text position={[basePos1.x, basePos1.y + 0.3, basePos1.z]} fontSize={isFocused ? 0.25 : 0.15} color={c1} anchorX="center">
+                <Text position={[basePos1.x, basePos1.y + 0.3, basePos1.z]} fontSize={0.15} color={c1} anchorX="center">
                   {bp.base1}
                 </Text>
-                <Text position={[basePos2.x, basePos2.y + 0.3, basePos2.z]} fontSize={isFocused ? 0.25 : 0.15} color={c2} anchorX="center">
+                <Text position={[basePos2.x, basePos2.y + 0.3, basePos2.z]} fontSize={0.15} color={c2} anchorX="center">
                   {bp.base2}
                 </Text>
               </>
@@ -251,13 +202,6 @@ function FullHelix({
                 <meshBasicMaterial color="#ff0000" transparent opacity={0.15} wireframe />
               </mesh>
             )}
-            
-            {/* Invisible clickable hit box */}
-            <mesh position={mid}>
-              <boxGeometry args={[2.5, 0.5, 0.5]} />
-              <meshBasicMaterial visible={false} />
-            </mesh>
-            
           </group>
         );
       })}
@@ -291,7 +235,8 @@ function FullHelix({
   );
 }
 
-function Particles({ count = 300, isFocused = false }) {
+function Particles() {
+  const count = 300;
   const positions = useMemo(() => {
     const pos = new Float32Array(count * 3);
     for (let i = 0; i < count; i++) {
@@ -300,11 +245,11 @@ function Particles({ count = 300, isFocused = false }) {
       pos[i * 3 + 2] = (Math.random() - 0.5) * 25;
     }
     return pos;
-  }, [count]);
+  }, []);
 
   const ref = useRef<THREE.Points>(null);
   useFrame((_, delta) => {
-    if (ref.current) ref.current.rotation.y += delta * (isFocused ? 0.05 : 0.015);
+    if (ref.current) ref.current.rotation.y += delta * 0.015;
   });
 
   return (
@@ -312,61 +257,9 @@ function Particles({ count = 300, isFocused = false }) {
       <bufferGeometry>
         <bufferAttribute attach="attributes-position" count={count} array={positions} itemSize={3} />
       </bufferGeometry>
-      <pointsMaterial size={0.03} color="#0088aa" transparent opacity={isFocused ? 0.8 : 0.4} sizeAttenuation />
+      <pointsMaterial size={0.03} color="#0088aa" transparent opacity={0.5} sizeAttenuation />
     </points>
   );
-}
-
-function CameraController({ focusedPosition }: { focusedPosition: THREE.Vector3 | null }) {
-  const { camera, controls } = useThree();
-  const initialCamPos = useMemo(() => new THREE.Vector3(0, 0, 8), []);
-  const initialTarget = useMemo(() => new THREE.Vector3(0, 0, 0), []);
-  
-  useEffect(() => {
-    if (focusedPosition) {
-      // Zoom into target
-      const targetCamPos = focusedPosition.clone().add(new THREE.Vector3(2, 1, 3));
-      
-      gsap.to(camera.position, {
-        x: targetCamPos.x,
-        y: targetCamPos.y,
-        z: targetCamPos.z,
-        duration: 1.5,
-        ease: "power3.inOut"
-      });
-      
-      if (controls && (controls as any).target) {
-        gsap.to((controls as any).target, {
-          x: focusedPosition.x,
-          y: focusedPosition.y,
-          z: focusedPosition.z,
-          duration: 1.5,
-          ease: "power3.inOut"
-        });
-      }
-    } else {
-      // Reset camera to initial position
-      gsap.to(camera.position, {
-        x: initialCamPos.x,
-        y: initialCamPos.y,
-        z: initialCamPos.z,
-        duration: 1.5,
-        ease: "power3.inOut"
-      });
-      
-      if (controls && (controls as any).target) {
-        gsap.to((controls as any).target, {
-          x: initialTarget.x,
-          y: initialTarget.y,
-          z: initialTarget.z,
-          duration: 1.5,
-          ease: "power3.inOut"
-        });
-      }
-    }
-  }, [focusedPosition, camera, controls, initialCamPos, initialTarget]);
-  
-  return null;
 }
 
 export interface ExplorerSceneProps {
@@ -378,49 +271,20 @@ export interface ExplorerSceneProps {
   highlightIndex: number | null;
   mutationIndex: number | null;
   mutationType: string | null;
-  autoRotate?: boolean;
-  searchPattern?: string;
-  onBasePairClick?: (index: number, base: BaseName, position: THREE.Vector3) => void;
-  focusedIndex?: number | null;
-  focusedPosition?: THREE.Vector3 | null;
-  onCanvasClick?: () => void;
 }
 
-export default function ExplorerScene({
-  autoRotate = false,
-  searchPattern = "",
-  focusedPosition = null,
-  focusedIndex = null,
-  onCanvasClick,
-  ...props
-}: ExplorerSceneProps) {
+export default function ExplorerScene(props: ExplorerSceneProps) {
   return (
-    <Canvas 
-      camera={{ position: [0, 0, 8], fov: 50 }} 
-      style={{ background: "transparent" }}
-      onPointerMissed={onCanvasClick}
-    >
+    <Canvas camera={{ position: [0, 0, 8], fov: 50 }} style={{ background: "transparent" }}>
       <ambientLight intensity={0.25} />
       <pointLight position={[5, 5, 5]} intensity={1} color="#00aaff" />
       <pointLight position={[-5, -3, 3]} intensity={0.6} color="#e050a0" />
       <spotLight position={[0, 10, 0]} intensity={0.4} color="#33dd77" angle={0.4} />
 
-      <FullHelix 
-        {...props} 
-        autoRotate={autoRotate} 
-        searchPattern={searchPattern} 
-        focusedIndex={focusedIndex}
-      />
-      <Particles count={focusedPosition ? 600 : 300} isFocused={!!focusedPosition} />
+      <FullHelix {...props} />
+      <Particles />
 
-      <CameraController focusedPosition={focusedPosition} />
-      <OrbitControls 
-        enableZoom={true} 
-        enablePan={false} 
-        minDistance={2} 
-        maxDistance={15} 
-        makeDefault
-      />
+      <OrbitControls enableZoom enablePan={false} minDistance={4} maxDistance={15} />
     </Canvas>
   );
 }
