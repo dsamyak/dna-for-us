@@ -1,4 +1,4 @@
-import { useRef, useMemo } from "react";
+import { useRef, useMemo, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Text, Html } from "@react-three/drei";
 import * as THREE from "three";
@@ -21,6 +21,20 @@ const BASE_NAMES: Record<BaseName, string> = {
   G: "Guanine",
 };
 
+const BASE_INFO: Record<BaseName, { title: string, content: string }> = {
+  A: { title: "Adenine (A)", content: "Purine base. Forms 2 hydrogen bonds with Thymine." },
+  T: { title: "Thymine (T)", content: "Pyrimidine base. Forms 2 hydrogen bonds with Adenine." },
+  C: { title: "Cytosine (C)", content: "Pyrimidine base. Forms 3 hydrogen bonds with Guanine." },
+  G: { title: "Guanine (G)", content: "Purine base. Forms 3 hydrogen bonds with Cytosine." },
+};
+
+const BACKBONE_INFO = {
+  title: "Sugar-Phosphate Backbone",
+  content: "Provides the structural framework of nucleic acids, consisting of alternating sugar and phosphate groups."
+};
+
+export type TooltipData = { id: string, title: string, content: string, position: THREE.Vector3 };
+
 // Generate a full double helix
 function FullHelix({ 
   sequence, 
@@ -31,6 +45,8 @@ function FullHelix({
   highlightIndex,
   mutationIndex,
   mutationType,
+  activeTooltip,
+  setActiveTooltip,
 }: {
   sequence: BaseName[];
   showLabels: boolean;
@@ -40,6 +56,8 @@ function FullHelix({
   highlightIndex: number | null;
   mutationIndex: number | null;
   mutationType: string | null;
+  activeTooltip: TooltipData | null;
+  setActiveTooltip: (v: TooltipData | null) => void;
 }) {
   const groupRef = useRef<THREE.Group>(null);
   const count = sequence.length;
@@ -103,10 +121,16 @@ function FullHelix({
       {/* Sugar-phosphate backbones */}
       {showBackbone && (
         <>
-          <mesh geometry={tube1}>
+          <mesh 
+            geometry={tube1}
+            onClick={(e) => { e.stopPropagation(); setActiveTooltip({ id: 'bb1', ...BACKBONE_INFO, position: e.point }); }}
+          >
             <meshStandardMaterial color="#1a6a9a" emissive="#0a3a5a" emissiveIntensity={0.6} />
           </mesh>
-          <mesh geometry={tube2}>
+          <mesh 
+            geometry={tube2}
+            onClick={(e) => { e.stopPropagation(); setActiveTooltip({ id: 'bb2', ...BACKBONE_INFO, position: e.point }); }}
+          >
             <meshStandardMaterial color="#6a1a5a" emissive="#3a0a2a" emissiveIntensity={0.6} />
           </mesh>
 
@@ -144,7 +168,11 @@ function FullHelix({
         return (
           <group key={`bp-${bp.index}`}>
             {/* Base spheres */}
-            <mesh position={basePos1} scale={isHighlighted ? 1.5 : 1}>
+            <mesh 
+              position={basePos1} 
+              scale={isHighlighted ? 1.5 : 1}
+              onClick={(e) => { e.stopPropagation(); setActiveTooltip({ id: `b1-${bp.index}`, ...BASE_INFO[bp.base1], position: basePos1.clone() }); }}
+            >
               <sphereGeometry args={[0.18, 12, 12]} />
               <meshStandardMaterial
                 color={c1}
@@ -152,7 +180,11 @@ function FullHelix({
                 emissiveIntensity={isHighlighted ? 1.2 : isMutated ? 1.5 : 0.5}
               />
             </mesh>
-            <mesh position={basePos2} scale={isHighlighted ? 1.5 : 1}>
+            <mesh 
+              position={basePos2} 
+              scale={isHighlighted ? 1.5 : 1}
+              onClick={(e) => { e.stopPropagation(); setActiveTooltip({ id: `b2-${bp.index}`, ...BASE_INFO[bp.base2], position: basePos2.clone() }); }}
+            >
               <sphereGeometry args={[0.18, 12, 12]} />
               <meshStandardMaterial
                 color={c2}
@@ -231,6 +263,16 @@ function FullHelix({
           </Html>
         </>
       )}
+
+      {/* Educational Hover/Click Tooltip */}
+      {activeTooltip && (
+        <Html position={activeTooltip.position} center style={{ pointerEvents: 'none' }}>
+          <div className="rounded-xl border border-primary/40 bg-card/90 px-4 py-3 backdrop-blur-md shadow-2xl w-56 sm:w-64 animate-in fade-in zoom-in pointer-events-none">
+            <h4 className="font-display text-sm font-bold text-primary mb-1">{activeTooltip.title}</h4>
+            <p className="font-mono text-[11px] text-muted-foreground leading-snug">{activeTooltip.content}</p>
+          </div>
+        </Html>
+      )}
     </group>
   );
 }
@@ -274,14 +316,20 @@ export interface ExplorerSceneProps {
 }
 
 export default function ExplorerScene(props: ExplorerSceneProps) {
+  const [activeTooltip, setActiveTooltip] = useState<TooltipData | null>(null);
+
   return (
-    <Canvas camera={{ position: [0, 0, 8], fov: 50 }} style={{ background: "transparent" }}>
+    <Canvas 
+      camera={{ position: [0, 0, 8], fov: 50 }} 
+      style={{ background: "transparent" }}
+      onPointerMissed={() => setActiveTooltip(null)}
+    >
       <ambientLight intensity={0.25} />
       <pointLight position={[5, 5, 5]} intensity={1} color="#00aaff" />
       <pointLight position={[-5, -3, 3]} intensity={0.6} color="#e050a0" />
       <spotLight position={[0, 10, 0]} intensity={0.4} color="#33dd77" angle={0.4} />
 
-      <FullHelix {...props} />
+      <FullHelix {...props} activeTooltip={activeTooltip} setActiveTooltip={setActiveTooltip} />
       <Particles />
 
       <OrbitControls enableZoom enablePan={false} minDistance={4} maxDistance={15} />
